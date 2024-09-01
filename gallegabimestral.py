@@ -55,7 +55,16 @@ def get_periods(start_date, end_date):
 
 # Fetching data
 tickers = ['GGAL', 'GGAL.BA']
-data = yf.download(tickers, start='2010-01-01', end=pd.Timestamp.today(), auto_adjust=True)['Adj Close']
+data = yf.download(tickers, start='2010-01-01', end=pd.Timestamp.today(), auto_adjust=True)
+
+# Check if the returned DataFrame has multi-level columns
+if isinstance(data.columns, pd.MultiIndex):
+    data = data['Adj Close']  # Select only 'Adj Close' if it is a multi-level DataFrame
+else:
+    if 'Adj Close' in data.columns:
+        data = data['Adj Close']
+    else:
+        data = data['Close']  # Fallback to 'Close' if 'Adj Close' is not available
 
 # Get periods
 start_date = data.index.min()
@@ -80,7 +89,7 @@ price_increase_df = pd.DataFrame(price_increases).set_index('Period')
 fig = px.imshow(price_increase_df.T, 
                 labels=dict(x="Period", y="Ticker", color="Price Increase (%)"),
                 x=price_increase_df.index, 
-                y=price_increase_df.columns[:-1],
+                y=price_increase_df.columns,
                 color_continuous_scale='RdYlGn')
 
 st.plotly_chart(fig)
