@@ -23,8 +23,20 @@ def third_friday(year, month):
     third_friday = month_start + pd.DateOffset(days=(14 + (4 - month_start.weekday()) % 7))
     return third_friday
 
+# Function to get the nearest available date
+def get_nearest_date(date, data_index, direction='forward'):
+    if direction == 'forward':
+        available_dates = data_index[data_index >= date]
+        if not available_dates.empty:
+            return available_dates[0]
+    elif direction == 'backward':
+        available_dates = data_index[data_index <= date]
+        if not available_dates.empty:
+            return available_dates[-1]
+    return None
+
 # Function to get the periods
-def get_periods(start_date, end_date):
+def get_periods(start_date, end_date, data_index):
     periods = []
     current_year = start_date.year
     current_month = start_date.month
@@ -40,17 +52,11 @@ def get_periods(start_date, end_date):
         start_period = fourth_monday(current_year, current_month)
         end_period = third_friday(current_year, current_month)
         
-        # Convert periods to timezone-naive if needed
-        if start_period.tzinfo is not None:
-            start_period = start_period.tz_localize(None)
-        if end_period.tzinfo is not None:
-            end_period = end_period.tz_localize(None)
-        if start_date.tzinfo is not None:
-            start_date = start_date.tz_localize(None)
-        if end_date.tzinfo is not None:
-            end_date = end_date.tz_localize(None)
+        # Find nearest available dates if exact dates are missing
+        start_period = get_nearest_date(start_period, data_index, 'forward')
+        end_period = get_nearest_date(end_period, data_index, 'backward')
         
-        if start_period > end_date:
+        if start_period is None or end_period is None or start_period > end_date:
             break
         
         periods.append((start_period, end_period))
@@ -89,7 +95,7 @@ if data.index.tzinfo is not None:
 # Get periods
 start_date = data.index.min()
 end_date = data.index.max()
-periods = get_periods(start_date, end_date)
+periods = get_periods(start_date, end_date, data.index)
 
 # Calculate price increase percentage for each period
 price_increases = []
@@ -111,14 +117,14 @@ if price_increase_df.empty:
     st.stop()
 
 # Plotting heatmap with seaborn
-plt.figure(figsize=(60, 8))
-heatmap = sns.heatmap(price_increase_df.T, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
+plt.figure(figsize=(14, 8))
+heatmap = sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
                      cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
 
 # Customize plot
 plt.title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=18)
-plt.xlabel("Period", fontsize=14)
-plt.ylabel("Ticker", fontsize=14)
+plt.xlabel("Ticker", fontsize=14)
+plt.ylabel("Period", fontsize=14)
 plt.xticks(rotation=45, ha='right', fontsize=12)
 plt.yticks(rotation=0, fontsize=12)
 
