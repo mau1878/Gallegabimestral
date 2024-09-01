@@ -117,18 +117,12 @@ for start, end in periods:
 
 price_increase_df = pd.DataFrame(price_increases).set_index('Period')
 
-# Print debug information
-st.write("Columns in price_increase_df:", price_increase_df.columns)
-st.write("Tickers being used:", tickers)
-
-# Ensure data is available for plotting
-if price_increase_df.empty:
-    st.error("No price increase data available for the specified periods.")
-    st.stop()
-
-# Reindex to ensure all tickers are included and fill missing values
+# Ensure that all tickers are included and fill missing values
 all_tickers = [ticker for ticker in tickers if ticker in price_increase_df.columns]
 price_increase_df = price_increase_df.reindex(columns=all_tickers, fill_value=np.nan)
+
+# Fill missing values by forward filling and backward filling
+price_increase_df = price_increase_df.fillna(method='ffill').fillna(method='bfill')
 
 # Plotting heatmap with seaborn
 plt.figure(figsize=(16, 12))  # Adjusting size for better visibility
