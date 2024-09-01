@@ -103,6 +103,13 @@ price_increases = []
 
 for start, end in periods:
     period_data = data.loc[start:end]
+    
+    # Find nearest dates if data is missing for the start or end date
+    if period_data.empty:
+        start = get_nearest_date(start, data.index, 'forward')
+        end = get_nearest_date(end, data.index, 'backward')
+        period_data = data.loc[start:end] if start and end else pd.DataFrame()
+    
     if not period_data.empty:
         start_prices = period_data.iloc[0]
         end_prices = period_data.iloc[-1]
@@ -126,14 +133,14 @@ all_tickers = [ticker for ticker in tickers if ticker in price_increase_df.colum
 price_increase_df = price_increase_df.reindex(columns=all_tickers, fill_value=np.nan)
 
 # Plotting heatmap with seaborn
-plt.figure(figsize=(80, 40))
-heatmap = sns.heatmap(price_increase_df.T, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
+plt.figure(figsize=(16, 12))  # Adjusting size for better visibility
+heatmap = sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
                      cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
 
 # Customize plot
 plt.title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=18)
-plt.xlabel("Period", fontsize=14)
-plt.ylabel("Ticker", fontsize=14)
+plt.xlabel("Ticker", fontsize=14)
+plt.ylabel("Period", fontsize=14)
 plt.xticks(rotation=45, ha='right', fontsize=12)
 plt.yticks(rotation=0, fontsize=12)
 
