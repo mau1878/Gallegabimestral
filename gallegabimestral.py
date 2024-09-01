@@ -4,9 +4,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import norm
 
-st.title('Price Increase Heatmap and Histograms for GGAL and GGAL.BA')
+st.title('Price Increase Heatmap for GGAL and GGAL.BA')
 
 # Function to find the 4th Monday of an even month
 def fourth_monday(year, month):
@@ -71,7 +70,6 @@ def get_periods(start_date, end_date, data_index):
     return periods
 
 # Function to fetch stock data
-@st.cache_data
 def fetch_data(tickers, start_date, end_date):
     try:
         data = yf.download(tickers, start=start_date, end=end_date, auto_adjust=True)
@@ -127,45 +125,58 @@ price_increase_df = price_increase_df.reindex(columns=all_tickers, fill_value=np
 price_increase_df = price_increase_df.fillna(method='ffill').fillna(method='bfill')
 
 # Plotting heatmap with seaborn
-fig, ax = plt.subplots(figsize=(14, 18))  # Adjusting size for better visibility
-sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
-            cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray', ax=ax)
+plt.figure(figsize=(14, 18))  # Adjusting size for better visibility
+heatmap = sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
+                     cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
 
-# Customize heatmap
-ax.set_title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=18)
-ax.set_xlabel("Ticker", fontsize=14)
-ax.set_ylabel("Period", fontsize=14)
-ax.tick_params(axis='x', rotation=0, labelsize=12)
-ax.tick_params(axis='y', rotation=0, labelsize=12)
+# Customize plot
+plt.title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=18)
+plt.xlabel("Ticker", fontsize=14)
+plt.ylabel("Period", fontsize=14)
+plt.xticks(rotation=0, fontsize=12)
+plt.yticks(rotation=0, fontsize=12)
 
-# Plot histograms
-for i, ticker in enumerate(all_tickers):
-    fig, ax = plt.subplots(figsize=(14, 6))  # Adjust size for each histogram
-    data_ticker = price_increase_df[ticker].dropna()
-    
-    # Fit Gaussian distribution
-    mu, std = norm.fit(data_ticker)
+# Display the plot in Streamlit
+st.pyplot(plt)
+
+# Additional code to plot histograms for each ticker
+
+# Calculate percentiles
+def plot_histogram_with_gaussian(data, ticker, ax):
+    # Dropna to ensure clean data
+    data = data.dropna()
     
     # Plot histogram
-    sns.histplot(data_ticker, kde=True, stat='density', color='blue', label='Histogram', bins=30, ax=ax)
+    sns.histplot(data, kde=True, stat="density", linewidth=0, color='skyblue', ax=ax)
     
-    # Plot Gaussian fit
+    # Plot Gaussian curve
+    mu, std = data.mean(), data.std()
     xmin, xmax = ax.get_xlim()
     x = np.linspace(xmin, xmax, 100)
-    p = norm.pdf(x, mu, std)
-    ax.plot(x, p, 'k', linewidth=2, label='Gaussian Fit')
+    p = np.exp(-0.5 * ((x - mu) / std) ** 2) / (std * np.sqrt(2 * np.pi))
+    ax.plot(x, p, 'k--', linewidth=2, label='Gaussian Fit')
     
-    # Plot percentiles
+    # Plot percentile lines
     percentiles = [5, 25, 50, 75, 95]
     for perc in percentiles:
-        perc_value = np.percentile(data_ticker, perc)
-        ax.axvline(perc_value, linestyle='--', color='red', label=f'{perc}th Percentile')
-    
-    # Customize histogram
-    ax.set_title(f'Histogram for {ticker}', fontsize=14)
-    ax.set_xlabel('Price Increase (%)', fontsize=12)
-    ax.set_ylabel('Density', fontsize=12)
+        percentile_value = np.percentile(data, perc)
+        ax.axvline(percentile_value, color='red', linestyle='--', linewidth=1, label=f'{perc}th Percentile')
+
+    # Customize plot
+    ax.set_title(f'Histogram of {ticker} Price Increases', fontsize=16)
+    ax.set_xlabel('Price Increase (%)', fontsize=14)
+    ax.set_ylabel('Density', fontsize=14)
     ax.legend()
 
-# Display the plots in Streamlit
-st.pyplot(fig)
+# Create a figure with subplots for each ticker
+fig, axs = plt.subplots(len(all_tickers), 1, figsize=(14, 5 * len(all_tickers)), sharex=True)
+
+# Plot histograms for each ticker
+for i, ticker in enumerate(all_tickers):
+    plot_histogram_with_gaussian(price_increase_df[ticker], ticker, axs[i])
+
+# Adjust layout
+plt.tight_layout()
+
+# Display the plot in Streamlit
+st.pyplot(plt)
