@@ -3,7 +3,6 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import calendar
 
 st.title('Price Increase Heatmap for GGAL and GGAL.BA')
 
@@ -16,12 +15,13 @@ def fourth_monday(year, month):
 
 # Function to find the 3rd Friday of the next even month
 def third_friday(year, month):
-    third_friday_month = month + 2
-    if third_friday_month > 12:
-        third_friday_month -= 12
+    next_even_month = month + 2
+    if next_even_month > 12:
+        next_even_month -= 12
         year += 1
-    month_start = pd.Timestamp(year, third_friday_month, 1)
-    third_friday = month_start + pd.offsets.Week(weekday=4) + pd.offsets.Week(weeks=2)
+    month_start = pd.Timestamp(year, next_even_month, 1)
+    # The 3rd Friday is 15 days from the start of the month or 1 week + 2 Fridays
+    third_friday = month_start + pd.DateOffset(days=(14 + (4 - month_start.weekday()) % 7))
     return third_friday
 
 # Function to get the periods
