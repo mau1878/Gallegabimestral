@@ -111,15 +111,16 @@ if price_increase_df.empty:
     st.stop()
 
 # Plotting heatmap with seaborn
-plt.figure(figsize=(12, 8))
-sns.heatmap(price_increase_df.T, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
-            cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
+plt.figure(figsize=(14, 8))
+heatmap = sns.heatmap(price_increase_df.T, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
+                     cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
 
-plt.title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=16)
+# Customize plot
+plt.title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=18)
 plt.xlabel("Period", fontsize=14)
 plt.ylabel("Ticker", fontsize=14)
-plt.xticks(rotation=45, ha='right')
-plt.yticks(rotation=0)
+plt.xticks(rotation=45, ha='right', fontsize=12)
+plt.yticks(rotation=0, fontsize=12)
 
 # Display the plot in Streamlit
 st.pyplot(plt)
