@@ -57,14 +57,20 @@ def get_periods(start_date, end_date):
 tickers = ['GGAL', 'GGAL.BA']
 data = yf.download(tickers, start='2010-01-01', end=pd.Timestamp.today(), auto_adjust=True)
 
+# Print column names for debugging
+st.write("Available columns in data:", data.columns)
+
 # Check if the returned DataFrame has multi-level columns
 if isinstance(data.columns, pd.MultiIndex):
     data = data['Adj Close']  # Select only 'Adj Close' if it is a multi-level DataFrame
 else:
     if 'Adj Close' in data.columns:
         data = data['Adj Close']
-    else:
+    elif 'Close' in data.columns:
         data = data['Close']  # Fallback to 'Close' if 'Adj Close' is not available
+    else:
+        st.error("No 'Adj Close' or 'Close' columns found in the data.")
+        st.stop()
 
 # Get periods
 start_date = data.index.min()
