@@ -71,6 +71,7 @@ def get_periods(start_date, end_date, data_index):
     return periods
 
 # Function to fetch stock data
+@st.cache_data
 def fetch_data(tickers, start_date, end_date):
     try:
         data = yf.download(tickers, start=start_date, end=end_date, auto_adjust=True)
@@ -126,47 +127,45 @@ price_increase_df = price_increase_df.reindex(columns=all_tickers, fill_value=np
 price_increase_df = price_increase_df.fillna(method='ffill').fillna(method='bfill')
 
 # Plotting heatmap with seaborn
-plt.figure(figsize=(14, 18))  # Adjusting size for better visibility
-plt.subplot(2, 1, 1)  # Heatmap
-heatmap = sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
-                     cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
+fig, ax = plt.subplots(figsize=(14, 18))  # Adjusting size for better visibility
+sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
+            cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray', ax=ax)
 
 # Customize heatmap
-plt.title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=18)
-plt.xlabel("Ticker", fontsize=14)
-plt.ylabel("Period", fontsize=14)
-plt.xticks(rotation=0, fontsize=12)
-plt.yticks(rotation=0, fontsize=12)
+ax.set_title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=18)
+ax.set_xlabel("Ticker", fontsize=14)
+ax.set_ylabel("Period", fontsize=14)
+ax.tick_params(axis='x', rotation=0, labelsize=12)
+ax.tick_params(axis='y', rotation=0, labelsize=12)
 
 # Plot histograms
 for i, ticker in enumerate(all_tickers):
-    plt.figure(figsize=(14, 6))  # Adjust size for each histogram
-    plt.subplot(1, len(all_tickers), i + 1)  # Histogram
+    fig, ax = plt.subplots(figsize=(14, 6))  # Adjust size for each histogram
     data_ticker = price_increase_df[ticker].dropna()
     
     # Fit Gaussian distribution
     mu, std = norm.fit(data_ticker)
     
     # Plot histogram
-    sns.histplot(data_ticker, kde=True, stat='density', color='blue', label='Histogram', bins=30)
+    sns.histplot(data_ticker, kde=True, stat='density', color='blue', label='Histogram', bins=30, ax=ax)
     
     # Plot Gaussian fit
-    xmin, xmax = plt.xlim()
+    xmin, xmax = ax.get_xlim()
     x = np.linspace(xmin, xmax, 100)
     p = norm.pdf(x, mu, std)
-    plt.plot(x, p, 'k', linewidth=2, label='Gaussian Fit')
+    ax.plot(x, p, 'k', linewidth=2, label='Gaussian Fit')
     
     # Plot percentiles
     percentiles = [5, 25, 50, 75, 95]
     for perc in percentiles:
         perc_value = np.percentile(data_ticker, perc)
-        plt.axvline(perc_value, linestyle='--', color='red', label=f'{perc}th Percentile')
+        ax.axvline(perc_value, linestyle='--', color='red', label=f'{perc}th Percentile')
     
     # Customize histogram
-    plt.title(f'Histogram for {ticker}', fontsize=14)
-    plt.xlabel('Price Increase (%)', fontsize=12)
-    plt.ylabel('Density', fontsize=12)
-    plt.legend()
+    ax.set_title(f'Histogram for {ticker}', fontsize=14)
+    ax.set_xlabel('Price Increase (%)', fontsize=12)
+    ax.set_ylabel('Density', fontsize=12)
+    ax.legend()
 
 # Display the plots in Streamlit
-st.pyplot(plt.figure(figsize=(14, 6)))
+st.pyplot(fig)
