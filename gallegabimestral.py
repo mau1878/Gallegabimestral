@@ -38,6 +38,16 @@ def get_periods(start_date, end_date):
         start_period = fourth_monday(current_year, current_month)
         end_period = third_friday(current_year, current_month)
         
+        # Convert periods to timezone-naive if needed
+        if start_period.tzinfo is not None:
+            start_period = start_period.tz_localize(None)
+        if end_period.tzinfo is not None:
+            end_period = end_period.tz_localize(None)
+        if start_date.tzinfo is not None:
+            start_date = start_date.tz_localize(None)
+        if end_date.tzinfo is not None:
+            end_date = end_date.tz_localize(None)
+        
         if start_period > end_date:
             break
         
