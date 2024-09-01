@@ -1,7 +1,6 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import numpy as np
 import plotly.express as px
 
 st.title('Price Increase Heatmap for GGAL and GGAL.BA')
@@ -20,7 +19,6 @@ def third_friday(year, month):
         next_even_month -= 12
         year += 1
     month_start = pd.Timestamp(year, next_even_month, 1)
-    # The 3rd Friday is 15 days from the start of the month or 1 week + 2 Fridays
     third_friday = month_start + pd.DateOffset(days=(14 + (4 - month_start.weekday()) % 7))
     return third_friday
 
@@ -30,7 +28,6 @@ def get_periods(start_date, end_date):
     current_year = start_date.year
     current_month = start_date.month
     
-    # Adjust to the nearest even month
     if current_month % 2 != 0:
         current_month += 1
         if current_month > 12:
@@ -53,24 +50,25 @@ def get_periods(start_date, end_date):
     
     return periods
 
-# Fetching data
-tickers = ['GGAL', 'GGAL.BA']
-data = yf.download(tickers, start='2010-01-01', end=pd.Timestamp.today(), auto_adjust=True)
-
-# Print column names for debugging
-st.write("Available columns in data:", data.columns)
-
-# Check if the returned DataFrame has multi-level columns
-if isinstance(data.columns, pd.MultiIndex):
-    data = data['Adj Close']  # Select only 'Adj Close' if it is a multi-level DataFrame
-else:
-    if 'Adj Close' in data.columns:
-        data = data['Adj Close']
-    elif 'Close' in data.columns:
-        data = data['Close']  # Fallback to 'Close' if 'Adj Close' is not available
-    else:
-        st.error("No 'Adj Close' or 'Close' columns found in the data.")
+# Function to fetch stock data
+def fetch_data(tickers, start_date, end_date):
+    try:
+        data = yf.download(tickers, start=start_date, end=end_date, auto_adjust=True)
+        if isinstance(data.columns, pd.MultiIndex):
+            data = data['Adj Close'] if 'Adj Close' in data.columns.levels[1] else data['Close']
+        else:
+            data = data['Adj Close'] if 'Adj Close' in data.columns else data['Close']
+        if data.empty:
+            st.error("No data available for the selected tickers.")
+            st.stop()
+        return data
+    except Exception as e:
+        st.error(f"Error fetching data: {e}")
         st.stop()
+
+# Fetch data
+tickers = ['GGAL', 'GGAL.BA']
+data = fetch_data(tickers, '2010-01-01', pd.Timestamp.today())
 
 # Get periods
 start_date = data.index.min()
@@ -91,11 +89,24 @@ for start, end in periods:
 
 price_increase_df = pd.DataFrame(price_increases).set_index('Period')
 
+# Ensure data is available for plotting
+if price_increase_df.empty:
+    st.error("No price increase data available for the specified periods.")
+    st.stop()
+
 # Plotting heatmap
 fig = px.imshow(price_increase_df.T, 
                 labels=dict(x="Period", y="Ticker", color="Price Increase (%)"),
                 x=price_increase_df.index, 
                 y=price_increase_df.columns,
-                color_continuous_scale='RdYlGn')
+                color_continuous_scale='RdYlGn',
+                title="Price Increase Heatmap for GGAL and GGAL.BA")
+
+fig.update_layout(
+    xaxis_title="Period",
+    yaxis_title="Ticker",
+    coloraxis_colorbar_title="Price Increase (%)",
+    xaxis=dict(tickangle=-45)
+)
 
 st.plotly_chart(fig)
