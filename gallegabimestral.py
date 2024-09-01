@@ -102,20 +102,18 @@ periods = get_periods(start_date, end_date, data.index)
 price_increases = []
 
 for start, end in periods:
-    period_data = data.loc[start:end]
+    # Ensure we have data available for the period
+    start = get_nearest_date(start, data.index, 'forward')
+    end = get_nearest_date(end, data.index, 'backward')
     
-    # Find nearest dates if data is missing for the start or end date
-    if period_data.empty:
-        start = get_nearest_date(start, data.index, 'forward')
-        end = get_nearest_date(end, data.index, 'backward')
-        period_data = data.loc[start:end] if start and end else pd.DataFrame()
-    
-    if not period_data.empty:
-        start_prices = period_data.iloc[0]
-        end_prices = period_data.iloc[-1]
-        percentage_increase = (end_prices / start_prices - 1) * 100
-        percentage_increase['Period'] = f"{start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}"
-        price_increases.append(percentage_increase)
+    if start and end:
+        period_data = data.loc[start:end]
+        if not period_data.empty:
+            start_prices = period_data.iloc[0]
+            end_prices = period_data.iloc[-1]
+            percentage_increase = (end_prices / start_prices - 1) * 100
+            percentage_increase['Period'] = f"{start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}"
+            price_increases.append(percentage_increase)
 
 price_increase_df = pd.DataFrame(price_increases).set_index('Period')
 
@@ -134,13 +132,13 @@ price_increase_df = price_increase_df.reindex(columns=all_tickers, fill_value=np
 
 # Plotting heatmap with seaborn
 plt.figure(figsize=(16, 12))  # Adjusting size for better visibility
-heatmap = sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
+heatmap = sns.heatmap(price_increase_df.T, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
                      cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
 
 # Customize plot
 plt.title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=18)
-plt.xlabel("Ticker", fontsize=14)
-plt.ylabel("Period", fontsize=14)
+plt.xlabel("Period", fontsize=14)
+plt.ylabel("Ticker", fontsize=14)
 plt.xticks(rotation=45, ha='right', fontsize=12)
 plt.yticks(rotation=0, fontsize=12)
 
