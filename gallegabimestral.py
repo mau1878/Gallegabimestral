@@ -1,7 +1,8 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import plotly.express as px
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 st.title('Price Increase Heatmap for GGAL and GGAL.BA')
 
@@ -109,19 +110,16 @@ if price_increase_df.empty:
     st.error("No price increase data available for the specified periods.")
     st.stop()
 
-# Plotting heatmap
-fig = px.imshow(price_increase_df.T, 
-                labels=dict(x="Period", y="Ticker", color="Price Increase (%)"),
-                x=price_increase_df.index, 
-                y=price_increase_df.columns,
-                color_continuous_scale='RdYlGn',
-                title="Price Increase Heatmap for GGAL and GGAL.BA")
+# Plotting heatmap with seaborn
+plt.figure(figsize=(12, 8))
+sns.heatmap(price_increase_df.T, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
+            cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
 
-fig.update_layout(
-    xaxis_title="Period",
-    yaxis_title="Ticker",
-    coloraxis_colorbar_title="Price Increase (%)",
-    xaxis=dict(tickangle=-45)
-)
+plt.title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=16)
+plt.xlabel("Period", fontsize=14)
+plt.ylabel("Ticker", fontsize=14)
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0)
 
-st.plotly_chart(fig)
+# Display the plot in Streamlit
+st.pyplot(plt)
