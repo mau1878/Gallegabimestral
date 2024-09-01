@@ -125,15 +125,15 @@ price_increase_df = price_increase_df.reindex(columns=all_tickers, fill_value=np
 price_increase_df = price_increase_df.fillna(method='ffill').fillna(method='bfill')
 
 # Plotting heatmap with seaborn
-plt.figure(figsize=(16, 12))  # Adjusting size for better visibility
-heatmap = sns.heatmap(price_increase_df.T, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
+plt.figure(figsize=(14, 18))  # Adjusting size for better visibility
+heatmap = sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
                      cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
 
 # Customize plot
 plt.title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=18)
-plt.xlabel("Period", fontsize=14)
-plt.ylabel("Ticker", fontsize=14)
-plt.xticks(rotation=45, ha='right', fontsize=12)
+plt.xlabel("Ticker", fontsize=14)
+plt.ylabel("Period", fontsize=14)
+plt.xticks(rotation=0, fontsize=12)
 plt.yticks(rotation=0, fontsize=12)
 
 # Display the plot in Streamlit
