@@ -4,8 +4,9 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import norm
 
-st.title('Price Increase Heatmap for GGAL and GGAL.BA')
+st.title('Price Increase Heatmap and Histograms for GGAL and GGAL.BA')
 
 # Function to find the 4th Monday of an even month
 def fourth_monday(year, month):
@@ -126,15 +127,46 @@ price_increase_df = price_increase_df.fillna(method='ffill').fillna(method='bfil
 
 # Plotting heatmap with seaborn
 plt.figure(figsize=(14, 18))  # Adjusting size for better visibility
+plt.subplot(2, 1, 1)  # Heatmap
 heatmap = sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
                      cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
 
-# Customize plot
+# Customize heatmap
 plt.title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=18)
 plt.xlabel("Ticker", fontsize=14)
 plt.ylabel("Period", fontsize=14)
 plt.xticks(rotation=0, fontsize=12)
 plt.yticks(rotation=0, fontsize=12)
 
-# Display the plot in Streamlit
-st.pyplot(plt)
+# Plot histograms
+for i, ticker in enumerate(all_tickers):
+    plt.figure(figsize=(14, 6))  # Adjust size for each histogram
+    plt.subplot(1, len(all_tickers), i + 1)  # Histogram
+    data_ticker = price_increase_df[ticker].dropna()
+    
+    # Fit Gaussian distribution
+    mu, std = norm.fit(data_ticker)
+    
+    # Plot histogram
+    sns.histplot(data_ticker, kde=True, stat='density', color='blue', label='Histogram', bins=30)
+    
+    # Plot Gaussian fit
+    xmin, xmax = plt.xlim()
+    x = np.linspace(xmin, xmax, 100)
+    p = norm.pdf(x, mu, std)
+    plt.plot(x, p, 'k', linewidth=2, label='Gaussian Fit')
+    
+    # Plot percentiles
+    percentiles = [5, 25, 50, 75, 95]
+    for perc in percentiles:
+        perc_value = np.percentile(data_ticker, perc)
+        plt.axvline(perc_value, linestyle='--', color='red', label=f'{perc}th Percentile')
+    
+    # Customize histogram
+    plt.title(f'Histogram for {ticker}', fontsize=14)
+    plt.xlabel('Price Increase (%)', fontsize=12)
+    plt.ylabel('Density', fontsize=12)
+    plt.legend()
+
+# Display the plots in Streamlit
+st.pyplot(plt.figure(figsize=(14, 6)))
