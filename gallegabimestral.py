@@ -111,7 +111,7 @@ if price_increase_df.empty:
     st.stop()
 
 # Plotting heatmap with seaborn
-plt.figure(figsize=(14, 8))
+plt.figure(figsize=(30, 8))
 heatmap = sns.heatmap(price_increase_df.T, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
                      cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
 
