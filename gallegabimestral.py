@@ -141,6 +141,17 @@ st.pyplot(plt)
 
 # Additional code to plot histograms for each ticker
 
+# Additional code to plot histograms for each ticker
+
+# Define colors for percentiles
+percentile_colors = {
+    5: 'blue',
+    25: 'green',
+    50: 'orange',
+    75: 'purple',
+    95: 'red'
+}
+
 # Calculate percentiles
 def plot_histogram_with_gaussian(data, ticker, ax):
     # Dropna to ensure clean data
@@ -156,11 +167,11 @@ def plot_histogram_with_gaussian(data, ticker, ax):
     p = np.exp(-0.5 * ((x - mu) / std) ** 2) / (std * np.sqrt(2 * np.pi))
     ax.plot(x, p, 'k--', linewidth=2, label='Gaussian Fit')
     
-    # Plot percentile lines
+    # Plot percentile lines with different colors
     percentiles = [5, 25, 50, 75, 95]
     for perc in percentiles:
         percentile_value = np.percentile(data, perc)
-        ax.axvline(percentile_value, color='red', linestyle='--', linewidth=1, label=f'{perc}th Percentile')
+        ax.axvline(percentile_value, color=percentile_colors[perc], linestyle='--', linewidth=1, label=f'{perc}th Percentile')
 
     # Customize plot
     ax.set_title(f'Histogram of {ticker} Price Increases', fontsize=16)
