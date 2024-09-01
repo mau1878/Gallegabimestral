@@ -28,6 +28,7 @@ def get_periods(start_date, end_date):
     current_year = start_date.year
     current_month = start_date.month
     
+    # Adjust to the nearest even month
     if current_month % 2 != 0:
         current_month += 1
         if current_month > 12:
@@ -79,6 +80,10 @@ def fetch_data(tickers, start_date, end_date):
 # Fetch data
 tickers = ['GGAL', 'GGAL.BA']
 data = fetch_data(tickers, '2010-01-01', pd.Timestamp.today())
+
+# Ensure that the data index is timezone-naive
+if data.index.tzinfo is not None:
+    data.index = data.index.tz_localize(None)
 
 # Get periods
 start_date = data.index.min()
