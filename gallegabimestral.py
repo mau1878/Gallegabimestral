@@ -116,15 +116,18 @@ if price_increase_df.empty:
     st.error("No price increase data available for the specified periods.")
     st.stop()
 
+# Fill missing values in the DataFrame
+price_increase_df = price_increase_df.reindex(columns=tickers, fill_value=np.nan)
+
 # Plotting heatmap with seaborn
-plt.figure(figsize=(14, 40))
-heatmap = sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
+plt.figure(figsize=(14, 8))
+heatmap = sns.heatmap(price_increase_df.T, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
                      cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
 
 # Customize plot
 plt.title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=18)
-plt.xlabel("Ticker", fontsize=14)
-plt.ylabel("Period", fontsize=14)
+plt.xlabel("Period", fontsize=14)
+plt.ylabel("Ticker", fontsize=14)
 plt.xticks(rotation=45, ha='right', fontsize=12)
 plt.yticks(rotation=0, fontsize=12)
 
