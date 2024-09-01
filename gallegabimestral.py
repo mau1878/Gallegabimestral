@@ -3,6 +3,7 @@ import yfinance as yf
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
 
 st.title('Price Increase Heatmap for GGAL and GGAL.BA')
 
@@ -35,7 +36,7 @@ def get_nearest_date(date, data_index, direction='forward'):
             return available_dates[-1]
     return None
 
-# Function to get the periods
+# Function to get periods
 def get_periods(start_date, end_date, data_index):
     periods = []
     current_year = start_date.year
@@ -111,16 +112,21 @@ for start, end in periods:
 
 price_increase_df = pd.DataFrame(price_increases).set_index('Period')
 
+# Print debug information
+st.write("Columns in price_increase_df:", price_increase_df.columns)
+st.write("Tickers being used:", tickers)
+
 # Ensure data is available for plotting
 if price_increase_df.empty:
     st.error("No price increase data available for the specified periods.")
     st.stop()
 
-# Fill missing values in the DataFrame
-price_increase_df = price_increase_df.reindex(columns=tickers, fill_value=np.nan)
+# Reindex to ensure all tickers are included and fill missing values
+all_tickers = [ticker for ticker in tickers if ticker in price_increase_df.columns]
+price_increase_df = price_increase_df.reindex(columns=all_tickers, fill_value=np.nan)
 
 # Plotting heatmap with seaborn
-plt.figure(figsize=(14, 8))
+plt.figure(figsize=(80, 40))
 heatmap = sns.heatmap(price_increase_df.T, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
                      cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
 
