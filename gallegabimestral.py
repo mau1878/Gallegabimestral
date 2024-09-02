@@ -124,20 +124,72 @@ price_increase_df = price_increase_df.reindex(columns=all_tickers, fill_value=np
 # Fill missing values by forward filling and backward filling
 price_increase_df = price_increase_df.fillna(method='ffill').fillna(method='bfill')
 
-# Create separate heatmaps for GGAL and GGAL.BA
-for ticker in all_tickers:
-    plt.figure(figsize=(14, 6))  # Adjust size for each heatmap
-    heatmap_data = price_increase_df[[ticker]].copy()
-    heatmap_data.columns = [ticker]
-    heatmap = sns.heatmap(heatmap_data, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
-                         cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
+# Plotting heatmap with seaborn
+plt.figure(figsize=(14, 18))  # Adjusting size for better visibility
+heatmap = sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
+                     cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
+
+# Customize plot
+plt.title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=18)
+plt.xlabel("Ticker", fontsize=14)
+plt.ylabel("Period", fontsize=14)
+plt.xticks(rotation=0, fontsize=12)
+plt.yticks(rotation=0, fontsize=12)
+
+# Display the plot in Streamlit
+st.pyplot(plt)
+
+# Additional code to plot histograms for each ticker
+
+# Additional code to plot histograms for each ticker
+
+# Define colors for percentiles
+percentile_colors = {
+    5: 'blue',
+    25: 'green',
+    50: 'orange',
+    75: 'purple',
+    95: 'red'
+}
+
+# Calculate percentiles
+def plot_histogram_with_gaussian(data, ticker, ax):
+    # Dropna to ensure clean data
+    data = data.dropna()
+    
+    # Plot histogram
+    sns.histplot(data, kde=True, stat="density", linewidth=0, color='skyblue', ax=ax)
+    
+    # Plot Gaussian curve
+    mu, std = data.mean(), data.std()
+    xmin, xmax = ax.get_xlim()
+    x = np.linspace(xmin, xmax, 100)
+    p = np.exp(-0.5 * ((x - mu) / std) ** 2) / (std * np.sqrt(2 * np.pi))
+    ax.plot(x, p, 'k--', linewidth=2, label='Gaussian Fit')
+    
+    # Plot percentile lines with different colors
+    percentiles = [5, 25, 50, 75, 95]
+    for perc in percentiles:
+        percentile_value = np.percentile(data, perc)
+        ax.axvline(percentile_value, color=percentile_colors[perc], linestyle='--', linewidth=1, label=f'{perc}th Percentile')
 
     # Customize plot
-    plt.title(f"Price Increase Heatmap for {ticker}", fontsize=18)
-    plt.xlabel("Year", fontsize=14)
-    plt.ylabel("Period", fontsize=14)
-    plt.xticks(rotation=45, fontsize=12)
-    plt.yticks(rotation=0, fontsize=12)
+    ax.set_title(f'Histogram of {ticker} Price Increases', fontsize=16)
+    ax.set_xlabel('Price Increase (%)', fontsize=14)
+    ax.set_ylabel('Density', fontsize=14)
+    ax.legend()
 
+# Create a figure with subplots for each ticker
+fig, axs = plt.subplots(len(all_tickers), 1, figsize=(14, 5 * len(all_tickers)), sharex=True)
+
+# Plot histograms for each ticker
+for i, ticker in enumerate(all_tickers):
+    plot_histogram_with_gaussian(price_increase_df[ticker], ticker, axs[i])
+
+# Adjust layout
+plt.tight_layout()
+
+# Display the plot in Streamlit
+st.pyplot(plt)
     # Display the plot in Streamlit
     st.pyplot(plt)
