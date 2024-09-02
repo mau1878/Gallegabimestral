@@ -1,193 +1,107 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import plotly.graph_objs as go
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
-st.title('Price Increase Heatmap for GGAL and GGAL.BA')
+# Set the ticker to GGAL (ADR)
+ticker = "GGAL"  # ADR for Grupo Financiero Galicia
 
-# Function to find the 4th Monday of an even month
-def fourth_monday(year, month):
-    first_day = pd.Timestamp(year, month, 1)
-    first_monday = first_day + pd.offsets.Week(weekday=0) - pd.offsets.Week(weekday=first_day.weekday())
-    fourth_monday = first_monday + pd.DateOffset(weeks=3)
-    return fourth_monday
+# User input for date range with default start date set to January 1, 2000
+start_date = st.date_input("Select the start date", value=pd.to_datetime('2000-01-01'))
+end_date = st.date_input("Select the end date", value=pd.to_datetime('today'))
 
-# Function to find the 3rd Friday of the next even month
-def third_friday(year, month):
-    next_even_month = month + 2
-    if next_even_month > 12:
-        next_even_month -= 12
-        year += 1
-    month_start = pd.Timestamp(year, next_even_month, 1)
-    third_friday = month_start + pd.DateOffset(days=(14 + (4 - month_start.weekday()) % 7))
-    return third_friday
+# User input for close price type
+close_price_type = st.selectbox("Select Close Price Type", ["Unadjusted", "Adjusted"])
 
-# Function to get the nearest available date
-def get_nearest_date(date, data_index, direction='forward'):
-    if direction == 'forward':
-        available_dates = data_index[data_index >= date]
-        if not available_dates.empty:
-            return available_dates[0]
-    elif direction == 'backward':
-        available_dates = data_index[data_index <= date]
-        if not available_dates.empty:
-            return available_dates[-1]
-    return None
+# Fetch historical data for GGAL
+data = yf.download(ticker, start=start_date, end=end_date)
 
-# Function to get periods
-def get_periods(start_date, end_date, data_index):
-    periods = []
-    current_year = start_date.year
-    current_month = start_date.month
-    
-    # Adjust to the nearest even month
-    if current_month % 2 != 0:
-        current_month += 1
-        if current_month > 12:
-            current_month = 2
-            current_year += 1
-    
-    while True:
-        start_period = fourth_monday(current_year, current_month)
-        end_period = third_friday(current_year, current_month)
-        
-        # Find nearest available dates if exact dates are missing
-        start_period = get_nearest_date(start_period, data_index, 'forward')
-        end_period = get_nearest_date(end_period, data_index, 'backward')
-        
-        if start_period is None or end_period is None or start_period > end_date:
-            break
-        
-        periods.append((start_period, end_period))
-        
-        current_month += 2
-        if current_month > 12:
-            current_month = 2
-            current_year += 1
-    
-    return periods
+# Select close price based on user input
+if close_price_type == "Adjusted":
+    price_column = 'Adj Close'
+else:
+    price_column = 'Close'
 
-# Function to fetch stock data
-def fetch_data(tickers, start_date, end_date):
-    try:
-        data = yf.download(tickers, start=start_date, end=end_date, auto_adjust=True)
-        if isinstance(data.columns, pd.MultiIndex):
-            data = data['Adj Close'] if 'Adj Close' in data.columns.levels[1] else data['Close']
-        else:
-            data = data['Adj Close'] if 'Adj Close' in data.columns else data['Close']
-        if data.empty:
-            st.error("No data available for the selected tickers.")
-            st.stop()
-        return data
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
-        st.stop()
+# Calculate 21-day SMA
+data['21_SMA'] = data[price_column].rolling(window=21).mean()
 
-# Fetch data
-tickers = ['GGAL', 'GGAL.BA']
-data = fetch_data(tickers, '2010-01-01', pd.Timestamp.today())
+# Calculate the dispersion (price - SMA)
+data['Dispersion'] = data[price_column] - data['21_SMA']
 
-# Ensure that the data index is timezone-naive
-if data.index.tzinfo is not None:
-    data.index = data.index.tz_localize(None)
+# Calculate the dispersion percentage
+data['Dispersion_Percent'] = data['Dispersion'] / data['21_SMA'] * 100
 
-# Get periods
-start_date = data.index.min()
-end_date = data.index.max()
-periods = get_periods(start_date, end_date, data.index)
+# Plotly Line Plot: Historical Price with 21 SMA
+fig = go.Figure()
 
-# Calculate price increase percentage for each period
-price_increases = []
+# Plot the historical close price
+fig.add_trace(go.Scatter(x=data.index, y=data[price_column], mode='lines', name='Close Price'))
 
-for start, end in periods:
-    # Ensure we have data available for the period
-    start = get_nearest_date(start, data.index, 'forward')
-    end = get_nearest_date(end, data.index, 'backward')
-    
-    if start and end:
-        period_data = data.loc[start:end]
-        if not period_data.empty:
-            start_prices = period_data.iloc[0]
-            end_prices = period_data.iloc[-1]
-            percentage_increase = (end_prices / start_prices - 1) * 100
-            percentage_increase['Period'] = f"{start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}"
-            price_increases.append(percentage_increase)
+# Plot the 21-day SMA
+fig.add_trace(go.Scatter(x=data.index, y=data['21_SMA'], mode='lines', name='21 SMA'))
 
-price_increase_df = pd.DataFrame(price_increases).set_index('Period')
+# Update layout
+fig.update_layout(
+    title=f"Historical {close_price_type} Price of {ticker} with 21-day SMA",
+    xaxis_title="Date",
+    yaxis_title="Price (USD)",
+    legend_title="Legend",
+    template="plotly_dark"
+)
 
-# Ensure that all tickers are included and fill missing values
-all_tickers = [ticker for ticker in tickers if ticker in price_increase_df.columns]
-price_increase_df = price_increase_df.reindex(columns=all_tickers, fill_value=np.nan)
+# Show the Plotly chart
+st.plotly_chart(fig)
 
-# Fill missing values by forward filling and backward filling
-price_increase_df = price_increase_df.fillna(method='ffill').fillna(method='bfill')
+# Plotly Line Plot: Historical Dispersion Percentage
+fig_dispersion = go.Figure()
 
-# Plotting heatmap with seaborn
-plt.figure(figsize=(14, 18))  # Adjusting size for better visibility
-heatmap = sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
-                     cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
+# Plot the dispersion percentage
+fig_dispersion.add_trace(go.Scatter(x=data.index, y=data['Dispersion_Percent'], mode='lines', name='Dispersion %'))
 
-# Customize plot
-plt.title("Price Increase Heatmap for GGAL and GGAL.BA", fontsize=18)
-plt.xlabel("Ticker", fontsize=14)
-plt.ylabel("Period", fontsize=14)
-plt.xticks(rotation=0, fontsize=12)
-plt.yticks(rotation=0, fontsize=12)
+# Add a red horizontal line at y=0
+fig_dispersion.add_shape(
+    go.layout.Shape(
+        type="line",
+        x0=data.index.min(),
+        x1=data.index.max(),
+        y0=0,
+        y1=0,
+        line=dict(color="red", width=2)
+    )
+)
 
-# Display the plot in Streamlit
-st.pyplot(plt)
+# Update layout
+fig_dispersion.update_layout(
+    title=f"Historical Dispersion Percentage of {ticker} ({close_price_type})",
+    xaxis_title="Date",
+    yaxis_title="Dispersion (%)",
+    legend_title="Legend",
+    template="plotly_dark"
+)
 
-# Additional code to plot histograms for each ticker
+# Show the Plotly chart for dispersion percentage
+st.plotly_chart(fig_dispersion)
 
-# Additional code to plot histograms for each ticker
+# Seaborn/Matplotlib Histogram: Dispersion Percent without Gaussian fit
+percentiles = [95, 75, 50, 25, 5]
+percentile_values = np.percentile(data['Dispersion_Percent'].dropna(), percentiles)
 
-# Define colors for percentiles
-percentile_colors = {
-    5: 'blue',
-    25: 'green',
-    50: 'orange',
-    75: 'purple',
-    95: 'red'
-}
+plt.figure(figsize=(10, 6))
+sns.histplot(data['Dispersion_Percent'].dropna(), color='blue', bins=30)
 
-# Calculate percentiles
-def plot_histogram_with_gaussian(data, ticker, ax):
-    # Dropna to ensure clean data
-    data = data.dropna()
-    
-    # Plot histogram
-    sns.histplot(data, kde=True, stat="density", linewidth=0, color='skyblue', ax=ax)
-    
-    # Plot Gaussian curve
-    mu, std = data.mean(), data.std()
-    xmin, xmax = ax.get_xlim()
-    x = np.linspace(xmin, xmax, 100)
-    p = np.exp(-0.5 * ((x - mu) / std) ** 2) / (std * np.sqrt(2 * np.pi))
-    ax.plot(x, p, 'k--', linewidth=2, label='Gaussian Fit')
-    
-    # Plot percentile lines with different colors
-    percentiles = [5, 25, 50, 75, 95]
-    for perc in percentiles:
-        percentile_value = np.percentile(data, perc)
-        ax.axvline(percentile_value, color=percentile_colors[perc], linestyle='--', linewidth=1, label=f'{perc}th Percentile')
+# Add percentile lines
+for percentile, value in zip(percentiles, percentile_values):
+    plt.axvline(value, color='red', linestyle='--')
+    plt.text(value, plt.ylim()[1]*0.9, f'{percentile}th', color='red')
 
-    # Customize plot
-    ax.set_title(f'Histogram of {ticker} Price Increases', fontsize=16)
-    ax.set_xlabel('Price Increase (%)', fontsize=14)
-    ax.set_ylabel('Density', fontsize=14)
-    ax.legend()
+plt.title(f'Dispersion Percentage of {ticker} ({close_price_type}) Close Price from 21-day SMA')
+plt.xlabel('Dispersion (%)')
+plt.ylabel('Frequency')
 
-# Create a figure with subplots for each ticker
-fig, axs = plt.subplots(len(all_tickers), 1, figsize=(14, 5 * len(all_tickers)), sharex=True)
+# Rotate Y labels
+plt.yticks(rotation=45)
 
-# Plot histograms for each ticker
-for i, ticker in enumerate(all_tickers):
-    plot_histogram_with_gaussian(price_increase_df[ticker], ticker, axs[i])
-
-# Adjust layout
-plt.tight_layout()
-
-# Display the plot in Streamlit
 st.pyplot(plt)
