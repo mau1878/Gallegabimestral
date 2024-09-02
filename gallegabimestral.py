@@ -139,10 +139,6 @@ plt.yticks(rotation=0, fontsize=12)
 # Display the plot in Streamlit
 st.pyplot(plt)
 
-# Additional code to plot histograms for each ticker
-
-# Additional code to plot histograms for each ticker
-
 # Define colors for percentiles
 percentile_colors = {
     5: 'blue',
@@ -191,5 +187,4 @@ plt.tight_layout()
 
 # Display the plot in Streamlit
 st.pyplot(plt)
-    # Display the plot in Streamlit
-    st.pyplot(plt)
+
