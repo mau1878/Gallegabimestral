@@ -136,6 +136,12 @@ plt.ylabel("Period", fontsize=14)
 plt.xticks(rotation=0, fontsize=12)
 plt.yticks(rotation=0, fontsize=12)
 
+# Draw red horizontal lines for new years
+years = pd.DatetimeIndex(price_increase_df.index).year.unique()
+for year in years:
+    year_start_index = price_increase_df.index.get_loc(pd.Timestamp(f'{year}-01-01'))
+    plt.axhline(y=year_start_index - 0.5, color='red', linestyle='--', linewidth=1)
+
 # Display the plot in Streamlit
 st.pyplot(plt)
 
@@ -187,4 +193,3 @@ plt.tight_layout()
 
 # Display the plot in Streamlit
 st.pyplot(plt)
-
