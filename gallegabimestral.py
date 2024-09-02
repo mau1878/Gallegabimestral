@@ -124,10 +124,6 @@ price_increase_df = price_increase_df.reindex(columns=all_tickers, fill_value=np
 # Fill missing values by forward filling and backward filling
 price_increase_df = price_increase_df.fillna(method='ffill').fillna(method='bfill')
 
-# Ensure that the index is a DatetimeIndex
-if not isinstance(price_increase_df.index, pd.DatetimeIndex):
-    price_increase_df.index = pd.to_datetime(price_increase_df.index)
-
 # Plotting heatmap with seaborn
 plt.figure(figsize=(14, 18))  # Adjusting size for better visibility
 heatmap = sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
@@ -139,14 +135,6 @@ plt.xlabel("Ticker", fontsize=14)
 plt.ylabel("Period", fontsize=14)
 plt.xticks(rotation=0, fontsize=12)
 plt.yticks(rotation=0, fontsize=12)
-
-# Draw red horizontal lines for new years
-years = pd.DatetimeIndex(price_increase_df.index).year.unique()
-for year in years:
-    year_start = pd.Timestamp(f'{year}-01-01')
-    if year_start in price_increase_df.index:
-        year_start_index = price_increase_df.index.get_loc(year_start)
-        plt.axhline(y=year_start_index - 0.5, color='red', linestyle='--', linewidth=1)
 
 # Display the plot in Streamlit
 st.pyplot(plt)
@@ -179,20 +167,23 @@ def plot_histogram_with_gaussian(data, ticker, ax):
     percentiles = [5, 25, 50, 75, 95]
     for perc in percentiles:
         percentile_value = np.percentile(data, perc)
-        ax.axvline(percentile_value, color=percentile_colors[perc], linestyle='--', linewidth=2)
-        ax.text(percentile_value, ax.get_ylim()[1] * 0.9, f'{perc}th', color=percentile_colors[perc])
+        ax.axvline(percentile_value, color=percentile_colors[perc], linestyle='--', linewidth=1, label=f'{perc}th Percentile')
 
     # Customize plot
-    ax.set_title(f'Histogram with Gaussian Fit for {ticker}', fontsize=16)
-    ax.set_xlabel('Price Increase (%)', fontsize=12)
-    ax.set_ylabel('Density', fontsize=12)
+    ax.set_title(f'Histogram of {ticker} Price Increases', fontsize=16)
+    ax.set_xlabel('Price Increase (%)', fontsize=14)
+    ax.set_ylabel('Density', fontsize=14)
     ax.legend()
 
-# Create histograms for each ticker
-fig, axes = plt.subplots(len(tickers), 1, figsize=(10, 5 * len(tickers)))
+# Create a figure with subplots for each ticker
+fig, axs = plt.subplots(len(all_tickers), 1, figsize=(14, 5 * len(all_tickers)), sharex=True)
 
-for i, ticker in enumerate(tickers):
-    plot_histogram_with_gaussian(price_increase_df[ticker], ticker, axes[i])
+# Plot histograms for each ticker
+for i, ticker in enumerate(all_tickers):
+    plot_histogram_with_gaussian(price_increase_df[ticker], ticker, axs[i])
 
-# Display the histograms in Streamlit
-st.pyplot(fig)
+# Adjust layout
+plt.tight_layout()
+
+# Display the plot in Streamlit
+st.pyplot(plt)
