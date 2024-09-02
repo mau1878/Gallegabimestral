@@ -125,7 +125,7 @@ price_increase_df = price_increase_df.reindex(columns=all_tickers, fill_value=np
 price_increase_df = price_increase_df.fillna(method='ffill').fillna(method='bfill')
 
 # Plotting heatmap with seaborn
-plt.figure(figsize=(14, 18))  # Adjusting size for better visibility
+plt.figure(figsize=(8, 18))  # Adjusting size for better visibility
 heatmap = sns.heatmap(price_increase_df, annot=True, fmt=".1f", cmap='RdYlGn', center=0,
                      cbar_kws={'label': 'Price Increase (%)'}, linewidths=.5, linecolor='gray')
 
